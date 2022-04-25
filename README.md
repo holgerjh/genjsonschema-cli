@@ -6,16 +6,20 @@ It supports the generation of one schema from multiple input files. If multiple 
 
 ## Installation
 
+Go to the [releases page](https://github.com/holgerjh/genjsonschema-cli/releases) and grab the latest release!
+
+Alternatively, do one of the following:
+
 Using `go install`:
 
 ```bash
  go install https://github.com/holgerjh/genjsonschema-cli
 ```
 
-Manually:
+Manually (Linux):
 
 ```bash
- go build && install -m 755 genjsonschema-cli ~/.local/bin  # assuming ~/.local/bin is in PATH
+ make build && install -m 755 genjsonschema-cli ~/.local/bin && make clean  # assuming ~/.local/bin is in PATH
 ```
 
 ## Usage
