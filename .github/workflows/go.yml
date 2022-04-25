@@ -117,7 +117,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Build
-      run: make build GOOS=${{ matrix.os }} BINARY=${{ matrix.asset_name }} VERSION=${{ github.ref }}
+      run: make build GOOS=${{ matrix.os }} BINARY=${{ matrix.artifact_name }} VERSION=${{ github.ref }}
     - name: Upload binaries to release
       uses: svenstaro/upload-release-action@v2
       with:
