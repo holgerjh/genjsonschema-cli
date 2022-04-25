@@ -1,7 +1,6 @@
 package createschema
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -9,6 +8,7 @@ import (
 
 	"github.com/holgerjh/genjsonschema"
 	"github.com/holgerjh/genjsonschema-cli/internal/merge"
+	"gopkg.in/yaml.v2"
 )
 
 type CreateSchemaApp struct {
@@ -25,7 +25,6 @@ type Arguments struct {
 }
 
 func (c *CreateSchemaApp) Run() error {
-
 	inputHandles, err := openAllFiles(c.Arguments.InputFiles)
 	if err != nil {
 		return fmt.Errorf("failed to open input file(s): %s", err)
@@ -92,7 +91,7 @@ func CreateSchemaFromFiles(cfg *genjsonschema.SchemaConfig, files []io.Reader, o
 	if err != nil {
 		return nil, err
 	}
-	b, err := json.Marshal(merged)
+	b, err := yaml.Marshal(merged)
 	if err != nil {
 		return nil, err
 	}

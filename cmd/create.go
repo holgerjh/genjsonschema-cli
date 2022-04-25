@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/holgerjh/genjsonschema"
 	"github.com/holgerjh/genjsonschema-cli/internal/createschema"
@@ -68,14 +69,17 @@ func generateCreateCommand() *cobra.Command {
 		},
 
 		Run: func(cmd *cobra.Command, args []string) {
-			app.Run()
+			if err := app.Run(); err != nil {
+				fmt.Printf("Encountered an error: %v", err)
+				os.Exit(1)
+			}
 		}}
 
 	command.Flags().StringP("output", "o", "", "Output file. Default is STDOUT.")
 	command.Flags().StringP("id", "d", "", "Fill the schema $id field.")
 	command.Flags().BoolP("require-all", "r", false, "Generates a schema that requires all object properties to be set. Default: false")
 	command.Flags().BoolP("allow-additional", "a", false, "Generates a schema that allows unknown object properties that were not encountered during schema generation. Default: false")
-	command.Flags().BoolP("merge-only", "m", false, "Do not generate a schema. Instead, output the JSON result of the merge operation. Default: false")
+	command.Flags().BoolP("merge-only", "m", false, "Do not generate a schema. Instead, output the YAML result of the merge operation. Default: false")
 	command.Flags().StringArrayVarP(&files, "file", "f", []string{}, "Additional file that will be merged into main file before creating the schema. Can be specified mulitple times.")
 
 	return command
