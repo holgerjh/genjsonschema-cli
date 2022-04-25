@@ -1,5 +1,7 @@
 # genjsonschema-cli
 ![Coverage](https://img.shields.io/badge/Coverage-61.7%25-yellow)
+![CI](https://github.com/holgerjh/genjsonschema/actions/workflows/go.yml/badge.svg)
+[![Go Report Card](https://goreportcard.com/badge/github.com/holgerjh/genjsonschema-cli)](https://goreportcard.com/report/github.com/holgerjh/genjsonschema-cli)
 
 Genjsonschema is a simple CLI for generating [JSON Schemas](https://json-schema.org) from YAML and JSON documents.
 It supports the generation of one schema from multiple input files. If multiple files are given, schema generation only succeeds if the resulting schema would be valid for all input files at once.
