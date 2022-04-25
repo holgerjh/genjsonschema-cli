@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
-	"reflect"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -136,11 +135,20 @@ func TestOnlyMerge(t *testing.T) {
 	if err := json.Unmarshal([]byte(want), &objWant); err != nil {
 		t.Fatalf("failed generating json: %v", err)
 	}
-	if err := json.Unmarshal([]byte(got), &objGot); err != nil {
+	if err := yaml.Unmarshal([]byte(got), &objGot); err != nil {
 		t.Fatalf("failed generating json: %v", err)
 	}
 
-	if !reflect.DeepEqual(objWant, objGot) {
-		t.Errorf("wanted %s but got %s", string(want), string(got))
+	rawWant, err := json.Marshal(objWant)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+	rawGot, err := json.Marshal(objWant)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	if diff := cmp.Diff(rawWant, rawGot); diff != "" {
+		t.Errorf("wanted %s but got %s, diff: %s", string(want), string(got), diff)
 	}
 }
