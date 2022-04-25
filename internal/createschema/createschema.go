@@ -12,9 +12,7 @@ import (
 )
 
 type CreateSchemaApp struct {
-	Arguments    *Arguments
-	outputHandle *os.File
-	inputHandle  *os.File
+	Arguments *Arguments
 }
 
 type Arguments struct {
