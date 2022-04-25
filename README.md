@@ -1,4 +1,5 @@
 # genjsonschema-cli
+![Coverage](https://img.shields.io/badge/Coverage-61.7%25-yellow)
 
 Genjsonschema is a simple CLI for generating [JSON Schemas](https://json-schema.org) from YAML and JSON documents.
 It supports the generation of one schema from multiple input files. If multiple files are given, schema generation only succeeds if the resulting schema would be valid for all input files at once.
