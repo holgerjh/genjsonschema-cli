@@ -109,11 +109,11 @@ jobs:
     strategy:
       matrix:
         include:
-          - artifact_name: genjsonschema
-            asset_name: genjsonschema-linux-amd64
+          - artifact_name: genjsonschema-cli
+            asset_name: genjsonschema-cli-linux-amd64
             os: linux
-          - artifact_name: genjsonschema.exe
-            asset_name: genjsonschema-windows-amd64
+          - artifact_name: genjsonschema-cli.exe
+            asset_name: genjsonschema-cli-windows-amd64
     steps:
     - uses: actions/checkout@v2
     - name: Build
