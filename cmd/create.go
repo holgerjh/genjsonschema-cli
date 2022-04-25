@@ -1,43 +1,53 @@
 package cmd
 
 import (
-	"bufio"
 	"fmt"
-	"io"
-	"io/fs"
-	"io/ioutil"
-	"os"
-
-	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v2"
 
 	"github.com/holgerjh/genjsonschema"
-	merge "github.com/holgerjh/genjsonschema-cli/internal/merge"
+	"github.com/holgerjh/genjsonschema-cli/internal/createschema"
+	"github.com/spf13/cobra"
 )
 
-// createCmd represents the create command
-var createCmd = &cobra.Command{
-	Use:   "create file1 [file2 [...]]",
-	Short: "Creates a JSON Schema from one or multiple YAML and/or JSON file(s)",
-	Long: `
+func generateCreateCommand() *cobra.Command {
+	app := &createschema.CreateSchemaApp{}
+
+	files := []string{}
+
+	command := &cobra.Command{
+		Use:   "create file",
+		Short: "Creates a JSON Schema from one or multiple YAML and/or JSON file(s)",
+		Long: `
 	This command creates a JSON Schema from one or multiple YAML and/or JSON file(s).
-	YAML files are only supported insofar they have an equivalent JSON representation,
-	this e.g. means they must not contain mappings where the key is a number.
-	
-	To read from STDIN, specify "-" as filename (only allowed once).
+	YAML files are only supported insofar they have an equivalent JSON representation.
+	Among others, this means they must only contain mappings with string keys.
+
+	List length and order is not preserved and datatypes encountered during schema generation
+	are allowed to occur an undefined number of times. This e.g. means that a schema generated
+	from '[1, "foo"]' accepts '[]', '[1, 2]' and ["bar", 5, 6, "baz"].
+
+	Example:
+	  Generate a schema from "example.yaml" and write it to STDOUT:
+	    genjsonschema example.yaml
+
+	  Generate a schema from "example.yaml" that requires all object properties to be set
+	  and that disallows additional object properties. Store it in "out.yaml":
+	  	genjsonschema -o out.yaml -r -a example.yaml
+
+
+	To read from STDIN, specify "-" as filename.
 		Example:
 		  echo '{"foo": "bar"}' | genjsonschema create -
 
-	If more than one input file is specified, they are merged together as follows:
+	Use -f to specify additional input files. Files are merged together as follows:
 
-		* Objects are deeply merged. If keys conflict, then the values from latter files overwrites those of previous files.
-		* Lists are always constructively merged. List order is not preserved. 
+		* Objects are deeply merged.
+		* Lists are merged constructively. 
 		
 		Example:
 		  Given:
 		  	file1: {"foo": "aaa", "bar": [41], "baz": [41]}
 		  	file2: {"foo": "bbb",              "baz": [42]}
-		  Then "genjsonschema create file1 file2" effectively works on the following input:
+		  Then "genjsonschema create -f file2 file1" effectively works on the following input:
 		  	       {"foo": "bbb", "bar": [41], "baz": [41, 42]}
 		
 		Merging is only supported for the same datatypes.
@@ -51,98 +61,66 @@ var createCmd = &cobra.Command{
 		  Given
 			file1: {"foo": 42}
 			file2: {"foo": {"bar": "baz"}}
-		  then "genjsonschema create file1 file2" fails with an error (42 and type object cannot be merged)
-		
-		
-
+		  then "genjsonschema create -f file2 file1" fails with an error (42 and type object cannot be merged)
 `,
-	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) < 1 {
-			fmt.Fprintf(os.Stderr, "You need to specify at least one input file.")
-			os.Exit(2)
-		}
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			return parseArguments(cmd, args, files, app)
+		},
 
-		result, err := CreateSchemaFromFiles(args...)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to create schema: %s", err)
-			os.Exit(1)
-		}
+		Run: func(cmd *cobra.Command, args []string) {
+			app.Run()
+		}}
 
-		outFile, _ := cmd.Flags().GetString("output")
-		if outFile == "" {
-			fmt.Fprintf(os.Stdout, "%s", result)
-		} else {
-			if err := os.WriteFile(outFile, result, fs.ModePerm); err != nil {
-				fmt.Fprintf(os.Stderr, "Failed to write result into output file: %s", err)
-				os.Exit(120)
-			}
-		}
+	command.Flags().StringP("output", "o", "", "Output file. Default is STDOUT.")
+	command.Flags().StringP("id", "d", "", "Fill the schema $id field.")
+	command.Flags().BoolP("require-all", "r", false, "Generates a schema that requires all object properties to be set. Default: false")
+	command.Flags().BoolP("allow-additional", "a", false, "Generates a schema that allows unknown object properties that were not encountered during schema generation. Default: false")
+	command.Flags().BoolP("merge-only", "m", false, "Do not generate a schema. Instead, output the JSON result of the merge operation. Default: false")
+	command.Flags().StringArrayVarP(&files, "file", "f", []string{}, "Additional file that will be merged into main file before creating the schema. Can be specified mulitple times.")
 
-	},
+	return command
+
 }
 
-func CreateSchemaFromFiles(files ...string) ([]byte, error) {
-	merged, err := LoadAndMergeFiles(files...)
+func parseArguments(cmd *cobra.Command, args []string, files []string, app *createschema.CreateSchemaApp) error {
+	if len(args) != 1 {
+		return fmt.Errorf("you need to specify exactly one input file. See --help for detailed information")
+	}
+	schemaConfig, err := schemaConfigFromCmd(cmd)
+	if err != nil {
+		return fmt.Errorf("unexpected error parsing command line: %v", err)
+	}
+	inputFiles := append(args, files...)
+	outFile, err := cmd.Flags().GetString("output")
+	if err != nil {
+		return fmt.Errorf("unexpected error parsing command line: %v", err)
+	}
+	mergeOnly, err := cmd.Flags().GetBool("merge-only")
+	if err != nil {
+		return fmt.Errorf("unexpected error parsing command line: %v", err)
+	}
+	app.Arguments = &createschema.Arguments{
+		SchemaConfig: *schemaConfig,
+		InputFiles:   inputFiles,
+		OutputFile:   outFile,
+		MergeOnly:    mergeOnly,
+	}
+	return nil
+}
+
+func schemaConfigFromCmd(cmd *cobra.Command) (*genjsonschema.SchemaConfig, error) {
+	id, err := cmd.Flags().GetString("id")
 	if err != nil {
 		return nil, err
 	}
-	b, err := yaml.Marshal(merged)
+	additionalProperties, err := cmd.Flags().GetBool("allow-additional")
 	if err != nil {
 		return nil, err
 	}
-	return genjsonschema.GenerateFromYAML(b, nil)
-}
-
-// LoadAndMergeFiles
-func LoadAndMergeFiles(files ...string) (interface{}, error) {
-	loadedFiles, err := loadAllFiles(files...)
+	requireAllProperties, err := cmd.Flags().GetBool("require-all")
 	if err != nil {
 		return nil, err
 	}
-	merged, err := merge.MergeAllYAML(loadedFiles...)
-	if err != nil {
-		return nil, err
-	}
-	return merged, nil
-}
 
-func loadAllFiles(files ...string) ([][]byte, error) {
-	loadedFiles := make([][]byte, len(files))
-	for i, v := range files {
-		var file *os.File = nil
-		var handle io.Reader
-		var err error = nil
-		if v == "-" {
-			handle = bufio.NewReader(os.Stdin)
-		} else {
-			file, err = os.Open(v)
-			if err != nil {
-				return nil, err
-			}
-			handle = file
-		}
-		loadedFiles[i], err = ioutil.ReadAll(handle)
-		if file != nil {
-			file.Close()
-		}
-		if err != nil {
-			return nil, err
-		}
-	}
-	return loadedFiles, nil
-}
-
-func init() {
-	rootCmd.AddCommand(createCmd)
-	createCmd.Flags().StringP("output", "o", "", "Output file. Default is STDOUT.")
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// createCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// createCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	return genjsonschema.NewSchemaConfig(id, additionalProperties, requireAllProperties), nil
 }
