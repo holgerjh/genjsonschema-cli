@@ -18,7 +18,7 @@ func RootCmd() *cobra.Command {
 		Use:   binaryName,
 		Short: "Generate JSON Schemas from one or more YAML or JSON files",
 		Long: `This application is used to generate JSON Schemas from YAML or JSON files.
-For more information, see genjsonschema-cli create --help 
+For more information, see create --help 
 `,
 	}
 	command.AddCommand(
