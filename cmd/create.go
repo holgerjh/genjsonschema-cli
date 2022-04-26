@@ -3,21 +3,14 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/holgerjh/genjsonschema"
 	"github.com/holgerjh/genjsonschema-cli/internal/createschema"
 	"github.com/spf13/cobra"
 )
 
-func generateCreateCommand() *cobra.Command {
-	app := &createschema.CreateSchemaApp{}
-
-	files := []string{}
-
-	command := &cobra.Command{
-		Use:   "create file",
-		Short: "Creates a JSON Schema from one or multiple YAML and/or JSON file(s)",
-		Long: `
+const longDesc = `
 	This command creates a JSON Schema from one or multiple YAML and/or JSON file(s).
 	YAML files are only supported insofar they have an equivalent JSON representation.
 	Among others, this means they must only contain mappings with string keys.
@@ -28,16 +21,16 @@ func generateCreateCommand() *cobra.Command {
 
 	Example:
 	  Generate a schema from "example.yaml" and write it to STDOUT:
-	    genjsonschema example.yaml
+	    $BINARY_NAME example.yaml
 
 	  Generate a schema from "example.yaml" that requires all object properties to be set
 	  and that disallows additional object properties. Store it in "out.yaml":
-	  	genjsonschema -o out.yaml -r -a example.yaml
+	  	$BINARY_NAME -o out.yaml -r -a example.yaml
 
 
 	To read from STDIN, specify "-" as filename.
 		Example:
-		  echo '{"foo": "bar"}' | genjsonschema create -
+		  echo '{"foo": "bar"}' | $BINARY_NAME create -
 
 	Use -f to specify additional input files. Files are merged together as follows:
 
@@ -48,7 +41,7 @@ func generateCreateCommand() *cobra.Command {
 		  Given:
 		  	file1: {"foo": "aaa", "bar": [41], "baz": [41]}
 		  	file2: {"foo": "bbb",              "baz": [42]}
-		  Then "genjsonschema create -f file2 file1" effectively works on the following input:
+		  Then "$BINARY_NAME create -f file2 file1" effectively works on the following input:
 		  	       {"foo": "bbb", "bar": [41], "baz": [41, 42]}
 		
 		Merging is only supported for the same datatypes.
@@ -62,8 +55,20 @@ func generateCreateCommand() *cobra.Command {
 		  Given
 			file1: {"foo": 42}
 			file2: {"foo": {"bar": "baz"}}
-		  then "genjsonschema create -f file2 file1" fails with an error (42 and type object cannot be merged)
-`,
+		  then "$BINARY_NAME create -f file2 file1" fails with an error (42 and type object cannot be merged)
+`
+
+func generateCreateCommand(binaryName string) *cobra.Command {
+	app := &createschema.CreateSchemaApp{}
+
+	files := []string{}
+
+	processedLongDesc := strings.ReplaceAll(longDesc, "$BINARY_NAME", binaryName)
+
+	command := &cobra.Command{
+		Use:   "create",
+		Short: "Creates a JSON Schema from one or multiple YAML and/or JSON file(s)",
+		Long:  processedLongDesc,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			return parseArguments(cmd, args, files, app)
 		},
