@@ -66,7 +66,7 @@ func generateCreateCommand(binaryName string) *cobra.Command {
 	processedLongDesc := strings.ReplaceAll(longDesc, "$BINARY_NAME", binaryName)
 
 	command := &cobra.Command{
-		Use:   "create",
+		Use:   "create FILE",
 		Short: "Creates a JSON Schema from one or multiple YAML and/or JSON file(s)",
 		Long:  processedLongDesc,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
@@ -92,8 +92,11 @@ func generateCreateCommand(binaryName string) *cobra.Command {
 }
 
 func parseArguments(cmd *cobra.Command, args []string, files []string, app *createschema.CreateSchemaApp) error {
-	if len(args) != 1 {
-		return fmt.Errorf("you need to specify exactly one input file. See --help for detailed information")
+	if len(args) == 0 {
+		return fmt.Errorf("missing FILE argument")
+	}
+	if len(args) > 1 {
+		return fmt.Errorf("use -f to specify multiple input files. See create --help for detailed information about merging behaviour")
 	}
 	schemaConfig, err := schemaConfigFromCmd(cmd)
 	if err != nil {
